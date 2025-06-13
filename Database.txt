@@ -1,0 +1,309 @@
+-- =====================================================
+-- SCRIPT THIẾT LẬP DATABASE CHO CỬA HÀNG HƯỚNG DƯƠNG
+-- =====================================================
+-- Copy toàn bộ script này vào phpMyAdmin và chạy
+
+-- Tạo database
+CREATE DATABASE IF NOT EXISTS sunflower_shop CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE sunflower_shop;
+
+-- Xóa bảng cũ nếu tồn tại (để reset)
+DROP TABLE IF EXISTS chitietdonhang;
+DROP TABLE IF EXISTS donhang;
+DROP TABLE IF EXISTS sanpham;
+DROP TABLE IF EXISTS danhmuc;
+DROP TABLE IF EXISTS khachhang;
+DROP TABLE IF EXISTS nhasanxuat;
+
+-- =====================================================
+-- TẠO CÁC BẢNG
+-- =====================================================
+
+-- Bảng danh mục sản phẩm
+CREATE TABLE danhmuc (
+    MaDM INT AUTO_INCREMENT PRIMARY KEY,
+    TenDM VARCHAR(100) NOT NULL,
+    MoTa TEXT,
+    NgayTao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Bảng nhà sản xuất
+CREATE TABLE nhasanxuat (
+    MaNSX INT AUTO_INCREMENT PRIMARY KEY,
+    TenNSX VARCHAR(100) NOT NULL,
+    DiaChi TEXT,
+    SoDT VARCHAR(15),
+    Email VARCHAR(100),
+    NgayTao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Bảng sản phẩm
+CREATE TABLE sanpham (
+    MaSP INT AUTO_INCREMENT PRIMARY KEY,
+    TenSP VARCHAR(200) NOT NULL,
+    Gia DECIMAL(15,0) NOT NULL,
+    TrongLuong VARCHAR(50),
+    MoTa TEXT,
+    Hinh VARCHAR(255),
+    MaDM INT,
+    MaNSX INT,
+    SoLuong INT DEFAULT 0,
+    NgayTao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    TrangThai ENUM('active', 'inactive') DEFAULT 'active',
+    FOREIGN KEY (MaDM) REFERENCES danhmuc(MaDM) ON DELETE SET NULL,
+    FOREIGN KEY (MaNSX) REFERENCES nhasanxuat(MaNSX) ON DELETE SET NULL,
+    INDEX idx_madm (MaDM),
+    INDEX idx_mansx (MaNSX),
+    INDEX idx_trangthai (TrangThai)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Bảng khách hàng (cải thiện bảo mật)
+CREATE TABLE khachhang (
+    MaKH INT AUTO_INCREMENT PRIMARY KEY,
+    TenDN VARCHAR(50) UNIQUE NOT NULL,
+    MatKhau VARCHAR(255) NOT NULL,
+    HoTen VARCHAR(100) NOT NULL,
+    SoDT VARCHAR(15) NOT NULL,
+    Email VARCHAR(100) NOT NULL UNIQUE,
+    DiaChi TEXT,
+    NgayDK TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    TrangThai ENUM('active', 'inactive', 'banned') DEFAULT 'active',
+    EmailVerified BOOLEAN DEFAULT FALSE,
+    LastLogin TIMESTAMP NULL,
+    LoginAttempts INT DEFAULT 0,
+    LockedUntil TIMESTAMP NULL,
+    ResetToken VARCHAR(100) NULL,
+    ResetTokenExpiry TIMESTAMP NULL,
+    INDEX idx_tendn (TenDN),
+    INDEX idx_email (Email),
+    INDEX idx_trangthai (TrangThai)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Bảng đơn hàng
+CREATE TABLE donhang (
+    MaDH INT AUTO_INCREMENT PRIMARY KEY,
+    MaKH INT,
+    NgayDat TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    TongTien DECIMAL(15,0) NOT NULL,
+    TrangThai ENUM('Cho xu ly', 'Dang giao', 'Da giao', 'Da huy') DEFAULT 'Cho xu ly',
+    DiaChiGiao TEXT,
+    GhiChu TEXT,
+    NgayCapNhat TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (MaKH) REFERENCES khachhang(MaKH) ON DELETE SET NULL,
+    INDEX idx_makh (MaKH),
+    INDEX idx_trangthai (TrangThai),
+    INDEX idx_ngaydat (NgayDat)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Bảng chi tiết đơn hàng
+CREATE TABLE chitietdonhang (
+    MaDH INT,
+    MaSP INT,
+    SoLuong INT NOT NULL,
+    DonGia DECIMAL(15,0) NOT NULL,
+    ThanhTien DECIMAL(15,0) GENERATED ALWAYS AS (SoLuong * DonGia) STORED,
+    PRIMARY KEY (MaDH, MaSP),
+    FOREIGN KEY (MaDH) REFERENCES donhang(MaDH) ON DELETE CASCADE,
+    FOREIGN KEY (MaSP) REFERENCES sanpham(MaSP) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =====================================================
+-- THÊM DỮ LIỆU MẪU
+-- =====================================================
+
+-- Thêm danh mục
+INSERT INTO danhmuc (TenDM, MoTa) VALUES 
+('Sua chua', 'Các loại sữa chua tươi ngon, bổ dưỡng'),
+('Dien thoai', 'Các loại smartphone cao cấp, hiện đại'),
+('Laptop', 'Máy tính xách tay các hãng nổi tiếng'),
+('Sua tuoi', 'Sữa tươi nguyên chất, không đường'),
+('Sua dac', 'Sữa đặc ngọt, sữa đặc có đường');
+
+-- Thêm nhà sản xuất
+INSERT INTO nhasanxuat (TenNSX, DiaChi, SoDT, Email) VALUES 
+('Ba Vi', 'Hà Nội', '024-123-4567', 'bavi@example.com'),
+('Vinamilk', 'TP.HCM', '028-123-4567', 'vinamilk@example.com'),
+('TH True Milk', 'Nghệ An', '0238-123-456', 'thmilk@example.com'),
+('Apple', 'California, USA', '+1-408-996-1010', 'apple@example.com'),
+('Samsung', 'Seoul, Korea', '+82-2-727-7114', 'samsung@example.com'),
+('Bphone', 'Hà Nội, Việt Nam', '024-987-6543', 'bphone@example.com'),
+('Asus', 'Taiwan', '+886-2-2894-3447', 'asus@example.com'),
+('Dell', 'Texas, USA', '+1-800-289-3355', 'dell@example.com');
+
+-- Thêm sản phẩm
+INSERT INTO sanpham (TenSP, Gia, TrongLuong, MoTa, MaDM, MaNSX, Hinh, SoLuong) VALUES 
+-- Sữa chua
+('Sữa chua Ba Vi', 9000, '450g', 'Sữa chua tươi ngon từ Ba Vi, không chất bảo quản', 1, 1, 'suachuabavi.jpg', 100),
+('Sữa chua Vinamilk', 10000, '490g', 'Sữa chua Vinamilk chất lượng cao, giàu canxi', 1, 2, 'suachuavinamilk.jpg', 150),
+('Sữa chua TH', 11000, '480g', 'Sữa chua TH organic, tự nhiên 100%', 1, 3, 'suachuath.jpg', 120),
+
+-- Điện thoại
+('iPhone 15 Pro Max', 32000000, '550g', 'iPhone cao cấp mới nhất với chip A17 Pro', 2, 4, 'iphone.jpg', 50),
+('Samsung Galaxy S24 Ultra', 28000000, '600g', 'Samsung Galaxy series với S Pen tích hợp', 2, 5, 'samsung.jpg', 40),
+('Bphone B86', 6000000, '480g', 'Điện thoại Bphone Việt Nam, thiết kế đẹp', 2, 6, 'bphone.jpg', 30),
+
+-- Laptop
+('Laptop Asus VivoBook X507MA N4000', 12000000, '2.1kg', 'CPU: Intel Celeron N4000, RAM 4GB, HDD 500GB', 3, 7, 'asus.jpg', 25),
+('Laptop Dell Inspiron 5593 i5 1035G1', 17500000, '2.3kg', 'CPU: Intel Core i5 1035G1, RAM 8GB, SSD 256GB', 3, 8, 'dell.jpg', 20),
+
+-- Sữa tươi  
+('Sữa tươi Vinamilk', 25000, '1L', 'Sữa tươi nguyên chất không đường, giàu vitamin', 4, 2, 'suatuoi.jpg', 200),
+('Sữa tươi TH', 28000, '1L', 'Sữa tươi organic TH, chất lượng cao', 4, 3, 'suatuoith.jpg', 180),
+
+-- Sữa đặc
+('Sữa đặc Ông Thọ', 35000, '397g', 'Sữa đặc có đường truyền thống', 5, 2, 'suadac.jpg', 300),
+('Sữa đặc Ngôi Sao Phương Nam', 32000, '380g', 'Sữa đặc ngọt thơm, chất lượng tốt', 5, 2, 'suadacngoisao.jpg', 250);
+
+-- =====================================================
+-- TẠO TÀI KHOẢN ADMIN VÀ USER MẪU
+-- =====================================================
+
+-- Tạo tài khoản admin (password: admin123)
+INSERT INTO khachhang (TenDN, MatKhau, HoTen, SoDT, Email, TrangThai) VALUES 
+('admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Quản Trị Viên', '098-111-6066', 'admin@sunflowershop.vn', 'active');
+
+-- Tạo một số tài khoản user mẫu
+-- Password của tất cả user mẫu là: 123456
+INSERT INTO khachhang (TenDN, MatKhau, HoTen, SoDT, Email) VALUES 
+('user1', '$2y$10$HfzIhGCCaxqyaIdGgjARSuOKAcm1Uy82YfLuNaajn6JrjLWy9Sj/W', 'Nguyễn Văn A', '0901234567', 'nguyenvana@email.com'),
+('user2', '$2y$10$HfzIhGCCaxqyaIdGgjARSuOKAcm1Uy82YfLuNaajn6JrjLWy9Sj/W', 'Trần Thị B', '0907654321', 'tranthib@email.com'),
+('user3', '$2y$10$HfzIhGCCaxqyaIdGgjARSuOKAcm1Uy82YfLuNaajn6JrjLWy9Sj/W', 'Lê Văn C', '0912345678', 'levanc@email.com');
+
+-- =====================================================
+-- TẠO STORED PROCEDURES (Tùy chọn)
+-- =====================================================
+
+DELIMITER //
+
+-- Procedure thêm sản phẩm vào giỏ hàng
+CREATE PROCEDURE AddToCart(
+    IN p_MaKH INT,
+    IN p_MaSP INT, 
+    IN p_SoLuong INT
+)
+BEGIN
+    DECLARE v_Gia DECIMAL(15,0);
+    DECLARE v_TongTien DECIMAL(15,0);
+    
+    -- Lấy giá sản phẩm
+    SELECT Gia INTO v_Gia FROM sanpham WHERE MaSP = p_MaSP;
+    SET v_TongTien = v_Gia * p_SoLuong;
+    
+    -- Tạo đơn hàng mới hoặc cập nhật đơn hàng hiện tại
+    INSERT INTO donhang (MaKH, TongTien) VALUES (p_MaKH, v_TongTien)
+    ON DUPLICATE KEY UPDATE TongTien = TongTien + v_TongTien;
+    
+    -- Thêm chi tiết đơn hàng
+    INSERT INTO chitietdonhang (MaDH, MaSP, SoLuong, DonGia) 
+    VALUES (LAST_INSERT_ID(), p_MaSP, p_SoLuong, v_Gia)
+    ON DUPLICATE KEY UPDATE SoLuong = SoLuong + p_SoLuong;
+END //
+
+-- Procedure cập nhật trạng thái đơn hàng
+CREATE PROCEDURE UpdateOrderStatus(
+    IN p_MaDH INT,
+    IN p_TrangThai VARCHAR(20)
+)
+BEGIN
+    UPDATE donhang 
+    SET TrangThai = p_TrangThai, NgayCapNhat = NOW() 
+    WHERE MaDH = p_MaDH;
+END //
+
+DELIMITER ;
+
+-- =====================================================
+-- TẠO TRIGGERS (Tùy chọn)
+-- =====================================================
+
+DELIMITER //
+
+-- Trigger cập nhật tổng tiền đơn hàng khi thêm/sửa chi tiết
+CREATE TRIGGER tr_update_order_total 
+AFTER INSERT ON chitietdonhang
+FOR EACH ROW
+BEGIN
+    UPDATE donhang 
+    SET TongTien = (
+        SELECT SUM(ThanhTien) 
+        FROM chitietdonhang 
+        WHERE MaDH = NEW.MaDH
+    )
+    WHERE MaDH = NEW.MaDH;
+END //
+
+-- Trigger ghi log khi khách hàng đăng nhập
+CREATE TRIGGER tr_login_log
+AFTER UPDATE ON khachhang
+FOR EACH ROW
+BEGIN
+    IF NEW.LastLogin != OLD.LastLogin THEN
+        INSERT INTO danhmuc (TenDM, MoTa) VALUES 
+        (CONCAT('Login_', NEW.TenDN), CONCAT('User logged in at ', NOW()));
+    END IF;
+END //
+
+DELIMITER ;
+
+-- =====================================================
+-- TẠO VIEWS (Tùy chọn)
+-- =====================================================
+
+-- View sản phẩm với thông tin danh mục và nhà sản xuất
+CREATE VIEW v_sanpham_full AS
+SELECT 
+    sp.MaSP,
+    sp.TenSP,
+    sp.Gia,
+    sp.TrongLuong,
+    sp.MoTa,
+    sp.Hinh,
+    sp.SoLuong,
+    sp.NgayTao,
+    sp.TrangThai,
+    dm.TenDM,
+    nsx.TenNSX
+FROM sanpham sp
+LEFT JOIN danhmuc dm ON sp.MaDM = dm.MaDM
+LEFT JOIN nhasanxuat nsx ON sp.MaNSX = nsx.MaNSX
+WHERE sp.TrangThai = 'active';
+
+-- View thống kê bán hàng
+CREATE VIEW v_thongke_banhang AS
+SELECT 
+    sp.TenSP,
+    SUM(ctdh.SoLuong) as TongSoLuongBan,
+    SUM(ctdh.ThanhTien) as TongDoanhThu,
+    COUNT(DISTINCT ctdh.MaDH) as SoDonHang
+FROM sanpham sp
+JOIN chitietdonhang ctdh ON sp.MaSP = ctdh.MaSP
+JOIN donhang dh ON ctdh.MaDH = dh.MaDH
+WHERE dh.TrangThai != 'Da huy'
+GROUP BY sp.MaSP, sp.TenSP
+ORDER BY TongDoanhThu DESC;
+
+-- =====================================================
+-- THIẾT LẬP QUYỀN VÀ BẢO MẬT
+-- =====================================================
+
+-- Tạo user database riêng biệt cho ứng dụng (khuyến nghị)
+-- CREATE USER 'sunflower_user'@'localhost' IDENTIFIED BY 'strong_password_here';
+-- GRANT SELECT, INSERT, UPDATE, DELETE ON sunflower_shop.* TO 'sunflower_user'@'localhost';
+-- FLUSH PRIVILEGES;
+
+-- =====================================================
+-- HOÀN TẤT THIẾT LẬP
+-- =====================================================
+
+-- Hiển thị thông tin thiết lập
+SELECT 'Database sunflower_shop đã được tạo thành công!' as status;
+SELECT COUNT(*) as total_products FROM sanpham;
+SELECT COUNT(*) as total_categories FROM danhmuc;
+SELECT COUNT(*) as total_customers FROM khachhang;
+SELECT COUNT(*) as total_manufacturers FROM nhasanxuat;
+
+-- Hiển thị thông tin đăng nhập
+SELECT 
+    'Thông tin đăng nhập' as info,
+    'Admin: admin / admin123' as admin_account,
+    'User mẫu: user1, user2, user3 / 123456' as sample_users;

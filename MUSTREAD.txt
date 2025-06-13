@@ -1,0 +1,20 @@
+Buoc 1 Kiem tra va tao database
+
+Mo phpMyAdmin theo link http://localhost/phpmyadmin
+Copy toan bo Script SQL và paste vào tab SQL
+Click Go doi chay script tao database
+Bu?c 2: Test voi file debug
+
+file debug.php voi noi dung dã cung cap
+Truy cap http://localhost/debug.php
+Kiem tra các thông tin debug de xác dinh lai
+Bu?c 3: Su dung phiên ban don gian
+
+simple_auth.php voi code 
+Truy cap http://localhost/simple_auth.php
+Test dang ký/dang nhap voi form don gion hon
+
+Tài khoan test có san:
+
+Admin: admin / admin123
+User mau: user1 / 123456
